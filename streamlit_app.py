@@ -7,6 +7,7 @@ import datetime
 import csv
 import os
 import logging
+import webbrowser
 
 # Setup for logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,19 +22,20 @@ API_BASE_URL = 'https://apisb.etrade.com/v1/market'
 def etrade_oauth():
     try:
         etrade = OAuth1Service(
+            name="etrade",
             consumer_key=CONSUMER_KEY,
             consumer_secret=CONSUMER_SECRET,
-            name='etrade',
             request_token_url=f'{OAUTH_BASE_URL}/request_token',
             access_token_url=f'{OAUTH_BASE_URL}/access_token',
             authorize_url=f'{OAUTH_BASE_URL}/authorize',
             base_url=API_BASE_URL
         )
 
-        request_token, request_token_secret = etrade.get_request_token(params={'oauth_callback': 'oob'})
+        request_token, request_token_secret = etrade.get_request_token(params={'oauth_callback': 'oob', 'format': 'json'})
         authorize_url = etrade.get_authorize_url(request_token)
 
         st.write('Please authenticate by visiting this URL:', authorize_url)
+        webbrowser.open(authorize_url)
         verifier = st.text_input('Enter the verifier code here:')
         if verifier:
             session = etrade.get_auth_session(
@@ -117,4 +119,36 @@ def log_trade(trade_info):
         writer.writerow([datetime.datetime.now(), trade_info['symbol'], trade_info['action'], trade_info['price']])
     st.success(f"Trade logged: {trade_info}")
 
-#
+# Plotting function for trading signals
+def plot_signals(data, tenkan_sen, kijun_sen, senkou_span_a, senkou_span_b, chikou_span):
+    fig = go.Figure()
+    # Plot close price
+    fig.add_trace(go.Scatter(x=data.index, y=data['close'], mode='lines', name='Close Price'))
+    # Plot Ichimoku components
+    fig.add_trace(go.Scatter(x=data.index, y=tenkan_sen, mode='lines', name='Tenkan-sen'))
+    fig.add_trace(go.Scatter(x=data.index, y=kijun_sen, mode='lines', name='Kijun-sen'))
+    fig.add_trace(go.Scatter(x=data.index, y=senkou_span_a, mode='lines', fill='tonexty', name='Senkou Span A'))
+    fig.add_trace(go.Scatter(x=data.index, y=senkou_span_b, mode='lines', fill='tonexty', name='Senkou Span B'))
+    fig.add_trace(go.Scatter(x=data.index, y=chikou_span, mode='lines', name='Chikou Span'))
+
+    st.plotly_chart(fig)
+
+# Main function to drive the app
+def main():
+    st.title('Trading App with E*TRADE Sandbox and Ichimoku Strategy')
+    session = etrade_oauth()
+    if session:
+        symbol = st.text_input('Enter stock symbol:')
+        if symbol:
+            data = fetch_stock_data(session, symbol)
+            if data is not None:
+                st.write(data)
+                ichimoku_components = calculate_ichimoku(data)
+                if ichimoku_components:
+                    tenkan_sen, kijun_sen, senkou_span_a, senkou_span_b, chikou_span = ichimoku_components
+                    plot_signals(data, tenkan_sen, kijun_sen, senkou_span_a, senkou_span_b, chikou_span)
+                target_price = st.number_input('Enter your target price for trade execution:', min_value=0.0, step=0.01, format="%.2f")
+                apply_trading_strategy(data, target_price)
+
+if __name__ == "__main__":
+    main()
