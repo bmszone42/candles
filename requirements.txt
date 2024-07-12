@@ -2,3 +2,4 @@ streamlit
 rauth==0.7.3
 requests 
 requests_oauthlib
+plotly
