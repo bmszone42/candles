@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 import datetime
 import csv
 import os
+import logging
 
 # Setup for logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
