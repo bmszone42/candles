@@ -31,6 +31,7 @@ def etrade_oauth():
     except Exception as e:
         logging.error(f"Authentication Error: {e}")
         st.error("Authentication failed, please check your credentials and network connection.")
+        return None
 
 # Fetch stock data using the E*TRADE sandbox API
 def fetch_stock_data(session, symbol):
@@ -79,7 +80,7 @@ def apply_trading_strategy(data, target_price):
     if data is not None and len(data) >= 5:
         avg_close = data['close'].head(5).mean()
         first_open = data['open'].iloc[0]
-        
+
         if avg_close > first_open:
             action = 'buy call'
             st.success(f"Average close is above the first open; buying calls at ${target_price}")
@@ -89,7 +90,7 @@ def apply_trading_strategy(data, target_price):
         else:
             action = 'hold'
             st.info("Average close is equal to the first open; no action recommended.")
-        
+
         log_trade({'symbol': data['symbol'].iloc[0], 'action': action, 'price': target_price})
     else:
         st.error("Not enough data to apply the strategy.")
