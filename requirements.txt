@@ -2,4 +2,4 @@ streamlit
 requests 
 #requests_oauthlib
 plotly
-rauth==0.7.3
+rauth
